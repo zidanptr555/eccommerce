@@ -31,9 +31,13 @@ include 'config.php';
   <nav class="bg-white shadow-md p-4 flex justify-between items-center sticky top-0 z-50">
     <h1 class="text-2xl font-bold text-ugpurple">UGSHOP Admin</h1>
     <div class="flex items-center gap-4">
-      <a href="add_product.php" class="bg-ugpurple text-white px-4 py-2 rounded-md hover:bg-ugpurplelight transition">+ Tambah Produk</a>
-      <a href="index.php" class="text-ugpurple hover:underline">Lihat Toko</a>
-      <a href="admin_logout.php" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition">Logout</a>
+       <a href="add_product.php" class="bg-ugpurple text-white px-4 py-2 rounded-md hover:bg-ugpurplelight transition">+ Tambah Produk</a>
+
+        <!-- Shortcut ke halaman pesanan -->
+        <a href="admin_orders.php" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition">Lihat Pesanan</a>
+
+        <a href="index.php" class="text-ugpurple hover:underline">Lihat Toko</a>
+        <a href="admin_logout.php" class="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition">Logout</a>
     </div>
   </nav>
 

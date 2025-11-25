@@ -84,7 +84,7 @@ $total     = $order['total_akhir'];
 
   <h2 class="text-xl font-bold text-ugpurple mb-3">Pilih Metode Pembayaran</h2>
 
-  <form action="payment_success.php" method="POST" class="space-y-4">
+  <form action="payment_process.php" method="POST" class="space-y-4">
 
     <!-- KIRIM DATA KE payment_success.php -->
     <input type="hidden" name="order_id" value="<?= $order_id ?>">

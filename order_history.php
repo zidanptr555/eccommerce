@@ -2,104 +2,126 @@
 include 'config.php';
 session_start();
 
-// Pastikan user sudah login
-if (!isset($_SESSION['user_id'])) {
+if(!isset($_SESSION['user_id'])){
     header("Location: login.php");
     exit;
 }
 
 $user_id = $_SESSION['user_id'];
+$search = $_GET['search'] ?? '';
 
-// Ambil semua pesanan milik user
+// Query semua order user
 $query = "
-    SELECT o.*, p.name AS product_name, p.image AS product_image
+    SELECT o.id AS order_id, o.alamat_penerima, o.metode, o.ongkir, o.total_akhir, o.status,
+           p.name AS product_name, oi.qty AS product_qty
     FROM orders o
-    JOIN products p ON o.product_id = p.id
+    JOIN order_items oi ON o.id = oi.order_id
+    JOIN products p ON oi.product_id = p.id
     WHERE o.user_id = $user_id
-    ORDER BY o.id DESC
 ";
 
+if(!empty($search)){
+    $search_safe = mysqli_real_escape_string($conn, $search);
+    $query .= " AND p.name LIKE '%$search_safe%'";
+}
+
+$query .= " ORDER BY o.id DESC";
+
 $result = mysqli_query($conn, $query);
+$orders = [];
+while($row = mysqli_fetch_assoc($result)){
+    $orders[$row['order_id']]['info'] = [
+        'alamat_penerima' => $row['alamat_penerima'],
+        'metode' => $row['metode'],
+        'ongkir' => $row['ongkir'],
+        'total_akhir' => $row['total_akhir'],
+        'status' => $row['status'] // tambahkan status di sini
+    ];
+    $orders[$row['order_id']]['products'][] = [
+        'name' => $row['product_name'],
+        'qty'  => $row['product_qty']
+    ];
+}
+
+// Fungsi untuk kasih warna status
+function statusColor($status){
+    return match($status){
+        'Menunggu Pembayaran' => 'bg-yellow-400 text-black',
+        'Paket Diproses' => 'bg-blue-500 text-white',
+        'Paket Diantarkan' => 'bg-orange-500 text-white',
+        'Paket Telah Tiba' => 'bg-green-600 text-white',
+        default => 'bg-gray-400 text-white',
+    };
+}
 ?>
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <title>Riwayat Pesanan</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+<meta charset="UTF-8">
+<title>Riwayat Pesanan</title>
+<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
-
 <body class="bg-gray-100">
 
 <div class="max-w-4xl mx-auto mt-10">
 
-    <h1 class="text-3xl font-bold mb-6 text-gray-800">Riwayat Pesanan</h1>
+<h1 class="text-3xl font-bold mb-6 text-gray-800">Riwayat Pesanan</h1>
 
-    <?php if (mysqli_num_rows($result) == 0): ?>
-        <div class="bg-white p-6 rounded-xl shadow text-center text-gray-600">
-            Kamu belum memiliki pesanan.
-        </div>
-    <?php else: ?>
-
-        <div class="space-y-6">
-            <?php while ($row = mysqli_fetch_assoc($result)): ?>
-                <div class="flex bg-white shadow rounded-xl p-4">
-
-                    <!-- Gambar Produk -->
-                    <img src="uploads/<?= $row['product_image']; ?>" 
-                         class="w-24 h-24 object-cover rounded-lg mr-4">
-
-                    <div class="flex-1">
-                        <h2 class="text-xl font-semibold"><?= $row['product_name']; ?></h2>
-
-                        <p class="text-gray-600 text-sm">
-                            <strong>Order ID:</strong> <?= $row['id']; ?>
-                        </p>
-
-                        <p class="text-gray-600 text-sm">
-                            <strong>Alamat Pengiriman:</strong> <?= $row['receiver_address']; ?>
-                        </p>
-
-                        <p class="text-gray-600 text-sm">
-                            <strong>Metode Pengiriman:</strong> <?= $row['shipping_method']; ?>
-                        </p>
-
-                        <p class="text-gray-600 text-sm">
-                            <strong>Ongkir:</strong> Rp<?= number_format($row['shipping_cost'], 0, ',', '.'); ?>
-                        </p>
-
-                        <p class="text-gray-600 text-sm">
-                            <strong>Total Harga:</strong> Rp<?= number_format($row['total_price'], 0, ',', '.'); ?>
-                        </p>
-
-                        <p class="mt-2">
-                            <span class="px-3 py-1 rounded-full text-white
-                                <?php if ($row['payment_status'] == 'paid'): ?>
-                                    bg-green-600
-                                <?php else: ?>
-                                    bg-yellow-600
-                                <?php endif; ?>
-                            ">
-                                <?= ucfirst($row['payment_status']); ?>
-                            </span>
-                        </p>
-                    </div>
-
-                    <!-- Tombol Detail -->
-                    <div class="flex flex-col justify-center ml-4">
-                        <a href="payment_success.php?order_id=<?= $row['id']; ?>"
-                           class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-                            Detail
-                        </a>
-                    </div>
-
-                </div>
-            <?php endwhile; ?>
-        </div>
-
-    <?php endif; ?>
-
+<!-- Button Kembali ke Beranda -->
+<div class="mb-6">
+    <a href="index.php" 
+       class="inline-block bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700">
+       ← Kembali ke Beranda
+    </a>
 </div>
 
+<!-- Form Pencarian -->
+<form method="GET" class="mb-6 flex gap-2">
+    <input type="text" name="search" placeholder="Cari produk..." 
+           value="<?= htmlspecialchars($search); ?>" 
+           class="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500">
+    <button type="submit" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
+        Cari
+    </button>
+</form>
+
+<?php if(empty($orders)): ?>
+<div class="bg-white p-6 rounded-xl shadow text-center text-gray-600">
+    Tidak ada pesanan<?= $search ? " untuk '$search'" : "" ?>.
+</div>
+<?php else: ?>
+<div class="space-y-6">
+    <?php foreach($orders as $order_id => $data): ?>
+        <div class="bg-white shadow rounded-xl p-4">
+            <div class="flex justify-between items-center mb-2">
+                <h2 class="font-semibold text-lg">Order ID: <?= $order_id; ?></h2>
+                <a href="payment_detail.php?order_id=<?= $order_id; ?>" 
+                   class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
+                   Detail
+                </a>
+            </div>
+            <p><strong>Alamat:</strong> <?= $data['info']['alamat_penerima']; ?></p>
+            <p><strong>Metode:</strong> <?= $data['info']['metode']; ?></p>
+            <p><strong>Ongkir:</strong> Rp<?= number_format($data['info']['ongkir'],0,',','.'); ?></p>
+            <p><strong>Total:</strong> Rp<?= number_format($data['info']['total_akhir'],0,',','.'); ?></p>
+            <p class="mt-2"><strong>Produk:</strong></p>
+            <ul class="ml-4 list-disc">
+                <?php foreach($data['products'] as $prod): ?>
+                    <li><?= $prod['name']; ?> x <?= $prod['qty']; ?></li>
+                <?php endforeach; ?>
+            </ul>
+            <!-- Tampilkan status pesanan -->
+            <p class="mt-2">
+                <span class="px-3 py-1 rounded-full <?= statusColor($data['info']['status']); ?>">
+                    <?= $data['info']['status']; ?>
+                </span>
+            </p>
+        </div>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+</div>
 </body>
 </html>

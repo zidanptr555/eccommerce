@@ -22,7 +22,8 @@ $tujuan   = $_POST['tujuan'];
 
 // ==== Ambil asal daerah toko dari produk pertama ====
 $asal_toko = "Jakarta";
-foreach ($_SESSION['cart'] as $pid => $qty) {
+foreach ($_SESSION['cart'] as $pid => $item) {
+    // $item bisa berupa array ['qty'=>..,'price'=>..]
     $q = mysqli_query($conn, "SELECT store_area FROM products WHERE id = $pid");
     $p = mysqli_fetch_assoc($q);
 
@@ -51,11 +52,19 @@ $ongkir = $ongkirTable[$asal_toko][$tujuan];
 
 // ==== Hitung total belanja ====
 $totalBelanja = 0;
-foreach ($_SESSION['cart'] as $product_id => $qty) {
-    $q = mysqli_query($conn, "SELECT price FROM products WHERE id = $product_id");
-    $p = mysqli_fetch_assoc($q);
+foreach ($_SESSION['cart'] as $product_id => $item) {
+    // Pastikan qty dan price valid
+    $qty = isset($item['qty']) ? intval($item['qty']) : 0;
+    $price = isset($item['price']) ? floatval($item['price']) : 0;
 
-    $totalBelanja += $p['price'] * $qty;
+    // Jika session tidak punya harga, fallback ambil dari DB
+    if ($price == 0) {
+        $q = mysqli_query($conn, "SELECT price FROM products WHERE id = $product_id");
+        $p = mysqli_fetch_assoc($q);
+        $price = $p['price'] ?? 0;
+    }
+
+    $totalBelanja += $qty * $price;
 }
 
 $totalAkhir = $totalBelanja + $ongkir;
@@ -73,10 +82,16 @@ mysqli_query($conn, "
 $order_id = mysqli_insert_id($conn);
 
 // ==== SIMPAN ITEM PESANAN ====
-foreach ($_SESSION['cart'] as $product_id => $qty) {
-    $q = mysqli_query($conn, "SELECT price FROM products WHERE id = $product_id");
-    $p = mysqli_fetch_assoc($q);
-    $harga = $p['price'];
+foreach ($_SESSION['cart'] as $product_id => $item) {
+    $qty = isset($item['qty']) ? intval($item['qty']) : 0;
+    $harga = isset($item['price']) ? floatval($item['price']) : 0;
+
+    // fallback ambil harga dari DB jika belum ada
+    if ($harga == 0) {
+        $q = mysqli_query($conn, "SELECT price FROM products WHERE id = $product_id");
+        $p = mysqli_fetch_assoc($q);
+        $harga = $p['price'] ?? 0;
+    }
 
     mysqli_query($conn, "
         INSERT INTO order_items (order_id, product_id, qty, price)
@@ -84,10 +99,10 @@ foreach ($_SESSION['cart'] as $product_id => $qty) {
     ");
 }
 
-// ❗ Jangan hapus cart dulu — baru hapus setelah payment_success
-// unset($_SESSION['cart']);  // DIHAPUS
+// ❗ Jangan hapus cart dulu — hapus setelah payment_success
+// unset($_SESSION['cart']);
 
 // ==== Redirect ke Payment ====
-header("Location: payment.php?order_id=$order_id&nama=$nama&hp=$hp&alamat=$alamat&asal=$asal_toko&tujuan=$tujuan&ongkir=$ongkir&total=$totalAkhir");
+header("Location: payment.php?order_id=$order_id");
 exit();
 ?>
