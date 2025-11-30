@@ -49,6 +49,12 @@ session_start();
       echo "<div class='grid gap-4'>";
 
       foreach ($_SESSION['cart'] as $product_id => $item) {
+          
+          if (!is_array($item)) {
+          $_SESSION['cart'][$product_id] = ['qty' => 1, 'price' => intval($item)];
+          $item = $_SESSION['cart'][$product_id];
+      }
+        
           $query = mysqli_query($conn, "SELECT * FROM products WHERE id = $product_id");
           if ($product = mysqli_fetch_assoc($query)) {
 

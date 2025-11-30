@@ -1,16 +1,17 @@
 <?php
-include 'config.php';
 session_start();
+include 'config.php';
 
-if(!isset($_SESSION['user_id'])){
+// ==== WAJIB LOGIN ====
+$user_id = intval($_SESSION['user_id'] ?? 0);
+if ($user_id <= 0) {
     header("Location: login.php");
-    exit;
+    exit();
 }
 
-$user_id = $_SESSION['user_id'];
 $search = $_GET['search'] ?? '';
 
-// Query semua order user
+// ==== QUERY ORDER USER ====
 $query = "
     SELECT o.id AS order_id, o.alamat_penerima, o.metode, o.ongkir, o.total_akhir, o.status,
            p.name AS product_name, oi.qty AS product_qty
@@ -20,7 +21,7 @@ $query = "
     WHERE o.user_id = $user_id
 ";
 
-if(!empty($search)){
+if (!empty($search)) {
     $search_safe = mysqli_real_escape_string($conn, $search);
     $query .= " AND p.name LIKE '%$search_safe%'";
 }
@@ -28,24 +29,26 @@ if(!empty($search)){
 $query .= " ORDER BY o.id DESC";
 
 $result = mysqli_query($conn, $query);
+
+// ==== SUSUN DATA ORDER ====
 $orders = [];
-while($row = mysqli_fetch_assoc($result)){
+while ($row = mysqli_fetch_assoc($result)) {
     $orders[$row['order_id']]['info'] = [
         'alamat_penerima' => $row['alamat_penerima'],
         'metode' => $row['metode'],
         'ongkir' => $row['ongkir'],
         'total_akhir' => $row['total_akhir'],
-        'status' => $row['status'] // tambahkan status di sini
+        'status' => $row['status']
     ];
     $orders[$row['order_id']]['products'][] = [
         'name' => $row['product_name'],
-        'qty'  => $row['product_qty']
+        'qty' => $row['product_qty']
     ];
 }
 
-// Fungsi untuk kasih warna status
-function statusColor($status){
-    return match($status){
+// ==== FUNGSIONALITAS WARNA STATUS ====
+function statusColor($status) {
+    return match($status) {
         'Menunggu Pembayaran' => 'bg-yellow-400 text-black',
         'Paket Diproses' => 'bg-blue-500 text-white',
         'Paket Diantarkan' => 'bg-orange-500 text-white',
@@ -86,38 +89,40 @@ function statusColor($status){
     </button>
 </form>
 
-<?php if(empty($orders)): ?>
+<?php if (empty($orders)): ?>
 <div class="bg-white p-6 rounded-xl shadow text-center text-gray-600">
-    Tidak ada pesanan<?= $search ? " untuk '$search'" : "" ?>.
+    Tidak ada pesanan<?= $search ? " untuk '" . htmlspecialchars($search) . "'" : "" ?>.
 </div>
 <?php else: ?>
 <div class="space-y-6">
-    <?php foreach($orders as $order_id => $data): ?>
-        <div class="bg-white shadow rounded-xl p-4">
-            <div class="flex justify-between items-center mb-2">
-                <h2 class="font-semibold text-lg">Order ID: <?= $order_id; ?></h2>
-                <a href="payment_detail.php?order_id=<?= $order_id; ?>" 
-                   class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
-                   Detail
-                </a>
-            </div>
-            <p><strong>Alamat:</strong> <?= $data['info']['alamat_penerima']; ?></p>
-            <p><strong>Metode:</strong> <?= $data['info']['metode']; ?></p>
-            <p><strong>Ongkir:</strong> Rp<?= number_format($data['info']['ongkir'],0,',','.'); ?></p>
-            <p><strong>Total:</strong> Rp<?= number_format($data['info']['total_akhir'],0,',','.'); ?></p>
-            <p class="mt-2"><strong>Produk:</strong></p>
-            <ul class="ml-4 list-disc">
-                <?php foreach($data['products'] as $prod): ?>
-                    <li><?= $prod['name']; ?> x <?= $prod['qty']; ?></li>
-                <?php endforeach; ?>
-            </ul>
-            <!-- Tampilkan status pesanan -->
-            <p class="mt-2">
-                <span class="px-3 py-1 rounded-full <?= statusColor($data['info']['status']); ?>">
-                    <?= $data['info']['status']; ?>
-                </span>
-            </p>
+    <?php foreach ($orders as $order_id => $data): ?>
+    <div class="bg-white shadow rounded-xl p-4">
+        <div class="flex justify-between items-center mb-2">
+            <h2 class="font-semibold text-lg">Order ID: <?= $order_id; ?></h2>
+            <a href="payment_detail.php?order_id=<?= $order_id; ?>" 
+               class="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">
+               Detail
+            </a>
         </div>
+
+        <p><strong>Alamat:</strong> <?= htmlspecialchars($data['info']['alamat_penerima']); ?></p>
+        <p><strong>Metode:</strong> <?= htmlspecialchars($data['info']['metode']); ?></p>
+        <p><strong>Ongkir:</strong> Rp<?= number_format($data['info']['ongkir'],0,',','.'); ?></p>
+        <p><strong>Total:</strong> Rp<?= number_format($data['info']['total_akhir'],0,',','.'); ?></p>
+
+        <p class="mt-2"><strong>Produk:</strong></p>
+        <ul class="ml-4 list-disc">
+            <?php foreach ($data['products'] as $prod): ?>
+                <li><?= htmlspecialchars($prod['name']); ?> x <?= intval($prod['qty']); ?></li>
+            <?php endforeach; ?>
+        </ul>
+
+        <p class="mt-2">
+            <span class="px-3 py-1 rounded-full <?= statusColor($data['info']['status']); ?>">
+                <?= htmlspecialchars($data['info']['status']); ?>
+            </span>
+        </p>
+    </div>
     <?php endforeach; ?>
 </div>
 <?php endif; ?>

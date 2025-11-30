@@ -2,6 +2,11 @@
 include 'config.php';
 session_start();
 
+// Pastikan cart SELALU array
+if (!isset($_SESSION['cart']) || !is_array($_SESSION['cart'])) {
+    $_SESSION['cart'] = [];
+}
+
 // ======= PROSES TAMBAH KE KERANJANG =======
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_id'])) {
     $product_id = intval($_POST['product_id']);
@@ -10,25 +15,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['product_id'])) {
     $prodQuery = mysqli_query($conn, "SELECT price, promo_price, is_promo FROM products WHERE id=$product_id");
     $prod = mysqli_fetch_assoc($prodQuery);
 
-    // Tentukan harga yang dipakai (promo atau normal)
+    // Tentukan harga promo atau normal
     $harga = ($prod['is_promo'] == 1) ? $prod['promo_price'] : $prod['price'];
 
-    if (!isset($_SESSION['cart'])) {
-        $_SESSION['cart'] = [];
-    }
-
-    if (isset($_SESSION['cart'][$product_id])) {
-        $_SESSION['cart'][$product_id]['qty']++;
-    } else {
+    // Tambah qty jika ada
+    if (isset($_SESSION['cart'][$product_id]) && is_array($_SESSION['cart'][$product_id])) {
+    $_SESSION['cart'][$product_id]['qty']++;
+      } else {
         $_SESSION['cart'][$product_id] = [
-            'qty' => 1,
-            'price' => $harga
-        ];
-    }
+        'qty' => 1,
+        'price' => $harga
+    ];
+}
+
 
     header("Location: index.php");
     exit;
 }
+
 
 // ======= SEARCH =======
 $search = isset($_GET['search']) ? mysqli_real_escape_string($conn, $_GET['search']) : '';
