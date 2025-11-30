@@ -103,7 +103,7 @@ $modeSearch = !empty($search);
           <p class='text-gray-500 line-through text-xs'>Rp " . number_format($promo['price'], 0, ',', '.') . "</p>
           <p class='text-ugpurple font-bold text-sm mb-2'>Rp " . number_format($promo['promo_price'], 0, ',', '.') . "</p>
           <div class='mt-auto flex justify-center gap-2'>
-            <a href='detailproduk.php?id={$promo['id']}' class='bg-ugpurple text-white px-3 py-1 rounded-md hover:bg-ugpurplelight transition text-sm'>Lihat</a>
+            <a href='product_detail.php?id={$promo['id']}' class='bg-ugpurple text-white px-3 py-1 rounded-md hover:bg-ugpurplelight transition text-sm'>Lihat</a>
             <form method='POST' class='inline'>
               <input type='hidden' name='product_id' value='{$promo['id']}'>
               <button type='submit' class='bg-green-500 text-white px-3 py-1 rounded-md hover:bg-green-600 transition text-sm'>+ Keranjang</button>
